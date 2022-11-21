@@ -2,21 +2,22 @@
 import sqlite3
 import os
 
-if not os.path.exists("score.sqlite3"):
+#DBファイル存在フラグ
+isFileExists = False
+
+if os.path.exists("score.sqlite3"):
+    isFileExists = True
+
+#sqlite3接続(DBファイル生成)
+con = sqlite3.connect("score.sqlite3")
+#sqliteカーソル取得
+cur = con.cursor()
+
+if isFileExists == False :
     #DBファイルが存在しないとき
-    #score.sqlite3ファイルを作成
-    con = sqlite3.connect("score.sqlite3")
-    #sqliteカーソル取得
-    cur = con.cursor()
     #テーブル作成
     cur.execute("create table score_table(date text,score real);")
     con.commit()
-else:
-    #DBファイルが存在するとき
-    #sqlite3接続
-    con = sqlite3.connect("score.sqlite3")
-    #sqliteカーソル取得
-    cur = con.cursor()
 
 print("Content-Type: text/html\n\n")
 

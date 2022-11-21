@@ -9,7 +9,6 @@ mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
-
 cam_width = 640
 cam_height = 480
 
@@ -20,21 +19,22 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH,cam_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT,cam_height)
 cap.set(cv2.CAP_PROP_FPS,30)
 
-if not os.path.exists("score.sqlite3"):
+#DBファイル存在フラグ
+isFileExists = False
+
+if os.path.exists("score.sqlite3"):
+    isFileExists = True
+
+#sqlite3接続(DBファイル生成)
+con = sqlite3.connect("score.sqlite3")
+#sqliteカーソル取得
+cur = con.cursor()
+
+if isFileExists == False :
     #DBファイルが存在しないとき
-    #score.sqlite3ファイルを作成
-    con = sqlite3.connect("score.sqlite3")
-    #sqliteカーソル取得
-    cur = con.cursor()
     #テーブル作成
     cur.execute("create table score_table(date text,score real);")
     con.commit()
-else:
-    #DBファイルが存在するとき
-    #sqlite3接続
-    con = sqlite3.connect("score.sqlite3")
-    #sqliteカーソル取得
-    cur = con.cursor()
 
 while True:
 
