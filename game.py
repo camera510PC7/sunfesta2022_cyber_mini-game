@@ -2,14 +2,16 @@ import cv2
 import mediapipe as mp
 import random
 import datetime
+import sqlite3
+import os
 
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
 mp_hands = mp.solutions.hands
 
 
-cam_width = 752
-cam_height = 416
+cam_width = 640
+cam_height = 480
 
 #webcam input
 cap = cv2.VideoCapture(0)
@@ -18,6 +20,22 @@ cap.set(cv2.CAP_PROP_FRAME_WIDTH,cam_width)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT,cam_height)
 cap.set(cv2.CAP_PROP_FPS,30)
 
+if not os.path.exists("score.sqlite3"):
+    #DBファイルが存在しないとき
+    #score.sqlite3ファイルを作成
+    con = sqlite3.connect("score.sqlite3")
+    #sqliteカーソル取得
+    cur = con.cursor()
+    #テーブル作成
+    cur.execute("create table score_table(date text,score real);")
+    con.commit()
+else:
+    #DBファイルが存在するとき
+    #sqlite3接続
+    con = sqlite3.connect("score.sqlite3")
+    #sqliteカーソル取得
+    cur = con.cursor()
+
 while True:
 
     #的の座標を格納するための配列
@@ -25,7 +43,7 @@ while True:
     #的の個数
     circle_count = 10
     #的の半径
-    circle_radius = 20
+    circle_radius = 25
     #的の表示管理の配列
     circle_display = [True] * circle_count
     #次に消す的
@@ -45,7 +63,9 @@ while True:
     end_time =  datetime.timedelta(seconds=0)
 
     #ゲーム時間(s)
-    game_time = 13
+    game_time = 25
+    #クリアタイム
+    clear_time = str(game_time)
 
     #ゲームクリアフラグ
     isClear = False
@@ -161,7 +181,10 @@ while True:
                 #ゲームクリア判定
                 if circle_next_id == circle_count:
                     #ゲーム終了へ遷移
+                    clear_time = (end_time - datetime.datetime.now()).total_seconds()
+                    
                     isClear = True
+                    isReady = False
                     scene = 3
 
                 #ゲームオーバー判定
@@ -181,7 +204,7 @@ while True:
                         cv2.circle(image,(circle[i][0],circle[i][1]),circle_radius,color=(255,0,0),thickness=-1)
                         cv2.putText(image,str(i+1),(circle[i][0]-13,circle[i][1]+10),cv2.FONT_HERSHEY_SIMPLEX,0.8,(255,255,255),2,cv2.LINE_AA)
                 #秒数表示
-                cv2.putText(image,str((end_time - datetime.datetime.now()).seconds),(cam_width//2 - 20,cam_height//2-10),cv2.FONT_HERSHEY_SIMPLEX,3,(0,255,255),4,cv2.LINE_AA)
+                cv2.putText(image,str((end_time - datetime.datetime.now()).seconds),(cam_width//2 - 40,cam_height//2-10),cv2.FONT_HERSHEY_SIMPLEX,3,(0,255,255),4,cv2.LINE_AA)
             
                 
 
@@ -198,13 +221,26 @@ while True:
                 if isClear == True:
                     #ゲームクリア表示
                     cv2.putText(image,"GAME CLEAR!!",(cam_width//2 - 320,cam_height//2),cv2.FONT_HERSHEY_SIMPLEX,3,(0,0,255),4,cv2.LINE_AA)
+                    cv2.putText(image,str("Clear Time: "+str(clear_time)),(cam_width//2 - 220,cam_height//2 + 100),cv2.FONT_HERSHEY_SIMPLEX,1.2,(0,0,255),2,cv2.LINE_AA)
+                    if isReady == False:
+                        play_date = str(datetime.datetime.now())
+                        cur.execute("insert into score_table(date,score) values (?,?);",(play_date,clear_time))
+                        con.commit()
+                        isReady = True
+                        
                 else:
                     #ゲームオーバー表示
                     cv2.putText(image,"GAME OVER",(cam_width//2 - 270,cam_height//2),cv2.FONT_HERSHEY_SIMPLEX,3,(255,0,0),4,cv2.LINE_AA)
-
-
-            
+         
             cv2.imshow('Catch Game', image)
-            if cv2.waitKey(5) & 0xFF == 27:
+            keycode = cv2.waitKey(5)
+            if keycode & 0xFF == 27:
+                #escキーでゲームリセット
                 break
+            elif keycode & 0xFF == 113:
+                #qキーでプロセス終了
+                con.close()
+                cap.release()
+                exit()
+con.close()
 cap.release()
